@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERC-20 Token Transaction Tracker and Contract Source Code Viewer</title>
+    <style>
+        /* CSS styles (unchanged) */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-break: break-all;
+            background-color: #f1f1f1;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ERC-20 Token Transaction Tracker and Contract Source Code Viewer</h1>
+
+    <!-- ERC-20 Token Transaction Tracker -->
+    <h2>ERC-20 Token Transaction Tracker</h2>
+    <input type="text" id="addressInput" placeholder="Enter Ethereum Address">
+    <button onclick="trackTransactions()">Track Transactions</button>
+    <div id="transactionsContainer"></div>
+
+    <!-- Etherscan Contract Source Code Viewer -->
+    <h2>Etherscan Contract Source Code Viewer</h2>
+    <p>Gas Price: <span id="gasPrice">Fetching...</span> Gwei</p>
+    <label for="contractAddress">Contract Address:</label>
+    <input type="text" id="contractAddress" placeholder="Enter contract address">
+    <button onclick="getSourceCode()">Get Source Code</button>
+    <div id="sourceCodeResult"></div>
+
+    <script>
+        // Function to fetch all ERC-20 token transactions from the API for the given address
+        async function fetchTokenTransactions(address) {
+            const apiKey = "8YUX8ETXVV5Y6YNWCN6TECQXSXAZTVRFPS"; // Replace with your actual API key
+            const apiUrl = `https://api.etherscan.io/api?module=account&action=tokentx&address=${address}&page=1&offset=100&startblock=0&endblock=999999999&sort=desc&apikey=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                // Process the data and display token names and contract addresses
+                displayTokenData(data.result);
+            } catch (error) {
+                console.error("Error fetching token transactions:", error);
+            }
+        }
+
+        // Function to display token names and contract addresses in the container
+        function displayTokenData(transactions) {
+            const container = document.getElementById("transactionsContainer");
+
+            // Clear the container first
+            container.innerHTML = "";
+
+            if (transactions.length === 0) {
+                const noTransactionsMessage = document.createElement("p");
+                noTransactionsMessage.textContent = "No ERC-20 token transactions found for this address.";
+                container.appendChild(noTransactionsMessage);
+            } else {
+                // Create a list to store token names and contract addresses
+                const tokenList = document.createElement("ul");
+
+                // Loop through transactions and extract token information
+                transactions.forEach(transaction => {
+                    const tokenName = transaction.tokenName;
+                    const contractAddress = transaction.contractAddress;
+
+                    // Create list item for each token
+                    const listItem = document.createElement("li");
+
+                    // Create link to the Etherscan page for the contract address
+                    const etherscanLink = document.createElement("a");
+                    etherscanLink.textContent = tokenName;
+                    etherscanLink.href = `https://etherscan.io/token/${contractAddress}`;
+
+                    // Append the link to the list item
+                    listItem.appendChild(etherscanLink);
+
+                    // Append the list item to the list
+                    tokenList.appendChild(listItem);
+                });
+
+                // Append the list of token names and contract addresses to the container
+                container.appendChild(tokenList);
+            }
+        }
+
+        // Function to track transactions for the input address
+        function trackTransactions() {
+            const addressInput = document.getElementById("addressInput");
+            const address = addressInput.value.trim();
+
+            if (address === "") {
+                alert("Please enter a valid Ethereum address.");
+                return;
+            }
+
+            fetchTokenTransactions(address);
+        }
+
+        // Function to fetch contract source code from the API for the given contract address
+        function getSourceCode() {
+            const contractAddress = document.getElementById('contractAddress').value;
+            const apiKey = '8YUX8ETXVV5Y6YNWCN6TECQXSXAZTVRFPS'; // Replace with your actual API key
+            const apiUrl = `https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${apiKey}`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "1" && data.message === "OK") {
+                        const sourceCode = data.result[0].SourceCode;
+                        displaySourceCode(sourceCode);
+                    } else {
+                        displayErrorMessage(data.message);
+                    }
+                })
+                .catch(error => {
+                    displayErrorMessage("Error fetching data. Please try again later.");
+                });
+        }
+
+        // Function to display contract source code in the container
+        function displaySourceCode(sourceCode) {
+            const resultContainer = document.getElementById('sourceCodeResult');
+            resultContainer.innerHTML = `
+                <h2>Contract Source Code:</h2>
+                <pre>${sourceCode}</pre>
+            `;
+        }
+
+        // Function to display error message in the container
+        function displayErrorMessage(message) {
+            const resultContainer = document.getElementById('sourceCodeResult');
+            resultContainer.innerHTML = `
+                <h2>Error:</h2>
+                <p>${message}</p>
+            `;
+        }
+
+        // Function to fetch current gas price from the API
+        function getGasPrice() {
+            const apiKey = '8YUX8ETXVV5Y6YNWCN6TECQXSXAZTVRFPS'; // Replace with your actual API key
+            const gasOracleUrl = `https://api.etherscan.io/api?module=gastracker&action=gasoracle&apikey=${apiKey}`;
+
+            fetch(gasOracleUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "1" && data.message === "OK") {
+                        const gasPrice = data.result.ProposeGasPrice;
+                        displayGasPrice(gasPrice);
+                    } else {
+                        displayGasPrice('Error');
+                    }
+                })
+                .catch(error => {
+                    displayGasPrice('Error');
+                });
+        }
+
+                // Function to display gas price in the container
+        function displayGasPrice(gasPrice) {
+            const gasPriceElement = document.getElementById('gasPrice');
+            gasPriceElement.textContent = gasPrice;
+        }
+
+        // Automatically fetch gas price when the page loads
+        getGasPrice();
+    </script>
+</body>
+</html>
